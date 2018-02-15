@@ -1851,13 +1851,13 @@ static int mb_handler(request_rec *r)
 
     /* prepare the filename to look up */
     if (rep != YUMLIST) {
-        filename = apr_pstrdup(r->pool, r->filename);
+        filename = apr_pstrdup(r->pool, r->uri);
     } else {
         filename = apr_pstrcat(r->pool, mirror_base, "/", yum->dir, "/", yum->file, NULL);
         debugLog(r, cfg, "yum path on disk: %s", filename);
     }
 
-    ptr = realpath(filename, NULL);
+    ptr = filename;  // don't resolve symlinks
     if (ptr == NULL) {
         ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r, 
                 "[mod_mirrorbrain] Error canonicalizing filename '%s'", filename);
@@ -1867,11 +1867,10 @@ static int mb_handler(request_rec *r)
 
     realfile = apr_pstrdup(r->pool, ptr);
     debugLog(r, cfg, "Canonicalized file on disk: %s", realfile);
-    free(ptr);
 
     /* the leading directory needs to be stripped from the file path */
     /* a directory from Apache always ends in '/'; a result from realpath() doesn't */
-    filename = realfile + strlen(mirror_base) + 1;
+    filename = realfile + 1;  //pdiener: don't do that stripping, just remove leading slash
 
     if (rep != YUMLIST) {
         /* keep a filename version without leading path, because metalink clients
